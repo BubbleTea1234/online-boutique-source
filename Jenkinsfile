@@ -63,7 +63,8 @@ pipeline {
             steps {
                 dir('helm-work') {
                     sh """
-                        rm -rf .git
+                        rm -rf .
+                        git init
                         git init
                         git remote add origin ${HELM_REPO}
                         git fetch origin ${HELM_BRANCH}
