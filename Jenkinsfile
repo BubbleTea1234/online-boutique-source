@@ -32,24 +32,23 @@ pipeline {
             }
         }
 
-        // ================ 改成3组，每组3-4个 ================
         stage('Build Images') {
             parallel {
-                stage('Group 1 - Frontend') {
+                stage('Group 1') {
                     steps {
                         dir('src/frontend') { buildImage('frontend') }
                         dir('src/cartservice/src') { buildImage('cartservice') }
                         dir('src/productcatalogservice') { buildImage('productcatalogservice') }
                     }
                 }
-                stage('Group 2 - Payment') {
+                stage('Group 2') {
                     steps {
                         dir('src/currencyservice') { buildImage('currencyservice') }
                         dir('src/paymentservice') { buildImage('paymentservice') }
                         dir('src/shippingservice') { buildImage('shippingservice') }
                     }
                 }
-                stage('Group 3 - Others') {
+                stage('Group 3') {
                     steps {
                         dir('src/emailservice') { buildImage('emailservice') }
                         dir('src/checkoutservice') { buildImage('checkoutservice') }
@@ -72,8 +71,11 @@ pipeline {
                         git config user.email "jenkins@boutique.com"
                         git config user.name "Jenkins CI"
 
-                        sed -i "s|repository:.*|repository: ${HARBOR_URL}/${params.ENV}|" values.yaml
-                        sed -i 's|tag: ".*"|tag: "'${APP_VERSION}'"|' values.yaml
+                        # values.yaml 在环境子目录下
+                        VALUES="${params.ENV}/values.yaml"
+
+                        sed -i "s|repository:.*|repository: ${HARBOR_URL}/${params.ENV}|" \${VALUES}
+                        sed -i "s|tag: \".*\"|tag: \"${APP_VERSION}\"|" \${VALUES}
 
                         echo "version: ${APP_VERSION}" > .version
                         echo "env: ${params.ENV}" >> .version
