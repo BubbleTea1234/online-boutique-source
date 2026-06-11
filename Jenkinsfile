@@ -30,22 +30,17 @@ pipeline {
             steps {
                 script {
                     GIT_HASH = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
-
-                    // ================ 改这一行 ================
                     env.APP_VERSION = params.APP_VERSION ?: "build-${BUILD_NUMBER}-${GIT_HASH}"
 
                     switch (params.ENV) {
                         case 'prod':
                             env.HELM_BRANCH = PROD_BRANCH
-                            env.TARGET_NAMESPACE = "boutique-prod"
                             break
                         case 'staging':
                             env.HELM_BRANCH = STAGING_BRANCH
-                            env.TARGET_NAMESPACE = "boutique-staging"
                             break
                         default:
                             env.HELM_BRANCH = DEV_BRANCH
-                            env.TARGET_NAMESPACE = "boutique-dev"
                     }
                     echo "环境: ${params.ENV}  版本: ${APP_VERSION}  Helm分支: ${HELM_BRANCH}"
                 }
@@ -81,7 +76,10 @@ pipeline {
                         git config user.name "Jenkins CI"
 
                         VALUES="values.yaml"
-                        sed -i "s|tag: latest|tag: ${APP_VERSION}|" \${VALUES}
+
+                        // ================ 修复：同时更新 repository 和 tag ================
+                        sed -i "s|repository:.*|repository: ${HARBOR_URL}/${params.ENV}|" \${VALUES}
+                        sed -i "s|tag: \".*\"|tag: \"${APP_VERSION}\"|" \${VALUES}
 
                         echo "version: ${APP_VERSION}" > .version
                         echo "env: ${params.ENV}" >> .version
