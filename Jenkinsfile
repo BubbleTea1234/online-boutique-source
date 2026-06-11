@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        HARBOR_URL = "13.229.80.117:8081"
+        HARBOR_URL = "54.179.178.241:8081"
         HARBOR_CRED = credentials('HARBOR-ACCOUNT')
         GIT_TOKEN = credentials('3b16e291-f7f9-4b0e-b6a0-5ee25df70bc5')
         HELM_REPO = "https://github.com/BubbleTea1234/online-boutique-helm.git"
