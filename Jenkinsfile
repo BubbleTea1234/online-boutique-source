@@ -63,7 +63,7 @@ pipeline {
             steps {
                 dir('helm-work') {
                     sh """
-                        rm -rf .
+                        rm -rf * .[!.]* 2>/dev/null; ls -A
                         git init
                         git init
                         git remote add origin ${HELM_REPO}
