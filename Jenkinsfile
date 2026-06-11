@@ -2,16 +2,8 @@ pipeline {
     agent any
 
     parameters {
-        choice(
-            name: 'ENV',
-            choices: ['dev', 'staging', 'prod'],
-            description: '部署环境'
-        )
-        string(
-            name: 'APP_VERSION',
-            defaultValue: '',
-            description: '自定义版本号（留空自动生成）'
-        )
+        choice(name: 'ENV', choices: ['dev', 'staging', 'prod'], description: '部署环境')
+        string(name: 'APP_VERSION', defaultValue: '', description: '自定义版本号（留空自动生成）')
     }
 
     environment {
@@ -19,10 +11,9 @@ pipeline {
         HARBOR_CRED = credentials('HARBOR-ACCOUNT')
         GIT_TOKEN = credentials('3b16e291-f7f9-4b0e-b6a0-5ee25df70bc5')
         HELM_REPO = "https://github.com/BubbleTea1234/online-boutique-helm.git"
-
-        DEV_BRANCH     = "develop"
+        DEV_BRANCH = "develop"
         STAGING_BRANCH = "release/staging"
-        PROD_BRANCH    = "main"
+        PROD_BRANCH = "main"
     }
 
     stages {
@@ -31,34 +22,27 @@ pipeline {
                 script {
                     GIT_HASH = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
                     env.APP_VERSION = params.APP_VERSION ?: "build-${BUILD_NUMBER}-${GIT_HASH}"
-
                     switch (params.ENV) {
-                        case 'prod':
-                            env.HELM_BRANCH = PROD_BRANCH
-                            break
-                        case 'staging':
-                            env.HELM_BRANCH = STAGING_BRANCH
-                            break
-                        default:
-                            env.HELM_BRANCH = DEV_BRANCH
+                        case 'prod':    env.HELM_BRANCH = PROD_BRANCH; break
+                        case 'staging': env.HELM_BRANCH = STAGING_BRANCH; break
+                        default:        env.HELM_BRANCH = DEV_BRANCH
                     }
-                    echo "环境: ${params.ENV}  版本: ${APP_VERSION}  Helm分支: ${HELM_BRANCH}"
                 }
             }
         }
 
         stage('Build Images') {
             parallel {
-                stage('frontend') { steps { dir('frontend') { buildImage('frontend') } } }
-                stage('cartservice') { steps { dir('cartservice') { buildImage('cartservice') } } }
-                stage('productcatalog') { steps { dir('productcatalogservice') { buildImage('productcatalogservice') } } }
-                stage('currencyservice') { steps { dir('currencyservice') { buildImage('currencyservice') } } }
-                stage('paymentservice') { steps { dir('paymentservice') { buildImage('paymentservice') } } }
-                stage('shippingservice') { steps { dir('shippingservice') { buildImage('shippingservice') } } }
-                stage('emailservice') { steps { dir('emailservice') { buildImage('emailservice') } } }
-                stage('checkoutservice') { steps { dir('checkoutservice') { buildImage('checkoutservice') } } }
-                stage('recommendationservice') { steps { dir('recommendationservice') { buildImage('recommendationservice') } } }
-                stage('adservice') { steps { dir('adservice') { buildImage('adservice') } } }
+                stage('frontend') { steps { dir('src/frontend') { buildImage('frontend') } } }
+                stage('cartservice') { steps { dir('src/cartservice') { buildImage('cartservice') } } }
+                stage('productcatalog') { steps { dir('src/productcatalogservice') { buildImage('productcatalogservice') } } }
+                stage('currencyservice') { steps { dir('src/currencyservice') { buildImage('currencyservice') } } }
+                stage('paymentservice') { steps { dir('src/paymentservice') { buildImage('paymentservice') } } }
+                stage('shippingservice') { steps { dir('src/shippingservice') { buildImage('shippingservice') } } }
+                stage('emailservice') { steps { dir('src/emailservice') { buildImage('emailservice') } } }
+                stage('checkoutservice') { steps { dir('src/checkoutservice') { buildImage('checkoutservice') } } }
+                stage('recommendationservice') { steps { dir('src/recommendationservice') { buildImage('recommendationservice') } } }
+                stage('adservice') { steps { dir('src/adservice') { buildImage('adservice') } } }
             }
         }
 
@@ -66,26 +50,16 @@ pipeline {
             steps {
                 dir('helm-work') {
                     sh """
-                        rm -rf .git
-                        git init
+                        rm -rf .git; git init
                         git remote add origin ${HELM_REPO}
-                        git fetch origin ${HELM_BRANCH}
-                        git checkout ${HELM_BRANCH}
+                        git fetch origin ${HELM_BRANCH}; git checkout ${HELM_BRANCH}
+                        git config user.email "jenkins@boutique.com"; git config user.name "Jenkins CI"
 
-                        git config user.email "jenkins@boutique.com"
-                        git config user.name "Jenkins CI"
+                        sed -i "s|repository:.*|repository: ${HARBOR_URL}/${params.ENV}|" values.yaml
+                        sed -i 's|tag: ".*"|tag: "'${APP_VERSION}'"|' values.yaml
 
-                        VALUES="values.yaml"
-
-                        // ================ 修复：同时更新 repository 和 tag ================
-                        sed -i "s|repository:.*|repository: ${HARBOR_URL}/${params.ENV}|" \${VALUES}
-                        sed -i "s|tag: \".*\"|tag: \"${APP_VERSION}\"|" \${VALUES}
-
-                        echo "version: ${APP_VERSION}" > .version
-                        echo "env: ${params.ENV}" >> .version
-
-                        git add -A
-                        git commit -m "[${params.ENV}] update to ${APP_VERSION}"
+                        echo "version: ${APP_VERSION}" > .version; echo "env: ${params.ENV}" >> .version
+                        git add -A; git commit -m "[${params.ENV}] update to ${APP_VERSION}"
                         git push https://\${GIT_TOKEN_USR}:\${GIT_TOKEN_PSW}@github.com/BubbleTea1234/online-boutique-helm.git \${HELM_BRANCH}
                     """
                 }
