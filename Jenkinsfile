@@ -27,35 +27,24 @@ pipeline {
                         case 'staging': env.HELM_BRANCH = STAGING_BRANCH; break
                         default:        env.HELM_BRANCH = DEV_BRANCH
                     }
-                    echo "环境: ${params.ENV}  版本: ${APP_VERSION}"
+                    echo "环境: ${params.ENV}  版本: ${APP_VERSION}  分支: ${HELM_BRANCH}"
                 }
             }
         }
 
         stage('Build Images') {
             parallel {
-                stage('Group 1') {
-                    steps {
-                        dir('src/frontend') { buildImage('frontend') }
-                        dir('src/cartservice/src') { buildImage('cartservice') }
-                        dir('src/productcatalogservice') { buildImage('productcatalogservice') }
-                    }
-                }
-                stage('Group 2') {
-                    steps {
-                        dir('src/currencyservice') { buildImage('currencyservice') }
-                        dir('src/paymentservice') { buildImage('paymentservice') }
-                        dir('src/shippingservice') { buildImage('shippingservice') }
-                    }
-                }
-                stage('Group 3') {
-                    steps {
-                        dir('src/emailservice') { buildImage('emailservice') }
-                        dir('src/checkoutservice') { buildImage('checkoutservice') }
-                        dir('src/recommendationservice') { buildImage('recommendationservice') }
-                        dir('src/adservice') { buildImage('adservice') }
-                    }
-                }
+                stage('frontend') { steps { dir('src/frontend') { buildImage('frontend') } } }
+                stage('cartservice') { steps { dir('src/cartservice/src') { buildImage('cartservice') } } }
+                stage('productcatalog') { steps { dir('src/productcatalogservice') { buildImage('productcatalogservice') } } }
+                stage('currencyservice') { steps { dir('src/currencyservice') { buildImage('currencyservice') } } }
+                stage('paymentservice') { steps { dir('src/paymentservice') { buildImage('paymentservice') } } }
+                stage('shippingservice') { steps { dir('src/shippingservice') { buildImage('shippingservice') } } }
+                stage('emailservice') { steps { dir('src/emailservice') { buildImage('emailservice') } } }
+                stage('checkoutservice') { steps { dir('src/checkoutservice') { buildImage('checkoutservice') } } }
+                stage('recommendationservice') { steps { dir('src/recommendationservice') { buildImage('recommendationservice') } } }
+                stage('adservice') { steps { dir('src/adservice') { buildImage('adservice') } } }
+                stage('loadgenerator') { steps { dir('src/loadgenerator') { buildImage('loadgenerator') } } }
             }
         }
 
@@ -63,8 +52,7 @@ pipeline {
             steps {
                 dir('helm-work') {
                     sh """
-                        rm -rf * .[!.]* 2>/dev/null; ls -A
-                        git init
+                        rm -rf * .[!.]* 2>/dev/null
                         git init
                         git remote add origin ${HELM_REPO}
                         git fetch origin ${HELM_BRANCH}
@@ -72,7 +60,6 @@ pipeline {
                         git config user.email "jenkins@boutique.com"
                         git config user.name "Jenkins CI"
 
-                        # values.yaml 在环境子目录下
                         VALUES="${params.ENV}/values.yaml"
 
                         sed -i "s|repository:.*|repository: ${HARBOR_URL}/${params.ENV}|" \${VALUES}
