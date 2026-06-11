@@ -38,7 +38,7 @@ pipeline {
                 stage('Group 1 - Frontend') {
                     steps {
                         dir('src/frontend') { buildImage('frontend') }
-                        dir('src/cartservice') { buildImage('cartservice') }
+                        dir('src/cartservice/src') { buildImage('cartservice') }
                         dir('src/productcatalogservice') { buildImage('productcatalogservice') }
                     }
                 }
